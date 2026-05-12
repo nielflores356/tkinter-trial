@@ -1,0 +1,508 @@
+import tkinter as tk
+from tkinter import messagebox
+import json
+import os
+
+
+FILE_NAME = "contacts.phonebook"
+contacts = []
+
+BG = "#121212"
+FRAME_BG = "#1e1e1e"
+ENTRY_BG = "#2a2a2a"
+FG = "white"
+ACCENT = "#3b82f6"
+
+CATEGORIES = ["Friends", "Family", "Work"]
+
+
+def load_contacts():
+    global contacts
+
+    if os.path.exists(FILE_NAME):
+        with open(FILE_NAME, "r") as file:
+            try:
+                contacts = json.load(file)
+            except:
+                contacts = []
+
+def save_contacts():
+    with open(FILE_NAME, "w") as file:
+        json.dump(contacts, file, indent=4)
+
+
+def add_placeholder(entry, placeholder):
+    entry.delete(0, tk.END)
+    entry.insert(0, placeholder)
+    entry.config(fg="gray")
+
+    def on_focus_in(event):
+        if entry.get() == placeholder:
+            entry.delete(0, tk.END)
+            entry.config(fg="white")
+
+    def on_focus_out(event):
+        if entry.get().strip() == "":
+            entry.delete(0, tk.END)
+            entry.insert(0, placeholder)
+            entry.config(fg="gray")
+
+    entry.bind("<FocusIn>", on_focus_in)
+    entry.bind("<FocusOut>", on_focus_out)
+
+
+def refresh_list(data=None):
+    listbox.delete(0, tk.END)
+
+    show_data = data if data is not None else contacts
+
+    for c in show_data:
+        listbox.insert(
+            tk.END,
+            f"{c['name']} | {c['phone']} | {c['email']} | {c.get('category', 'N/A')}"
+        )
+
+def get_index():
+    try:
+        return listbox.curselection()[0]
+    except:
+        return None
+
+def clear_fields():
+    add_placeholder(entry_name, "Name")
+    add_placeholder(entry_phone, "Phone")
+    add_placeholder(entry_email, "Email")
+    category_var.set(CATEGORIES[0])
+
+
+def search_contact():
+    keyword = search_entry.get().lower()
+
+    if keyword in ["", "search contact"]:
+        refresh_list()
+        return
+
+    filtered = []
+
+    for c in contacts:
+        if (
+            keyword in c["name"].lower()
+            or keyword in c["phone"].lower()
+            or keyword in c["email"].lower()
+            or keyword in c.get("category", "").lower()
+        ):
+            filtered.append(c)
+
+    refresh_list(filtered)
+
+
+def back_to_contacts():
+    add_placeholder(search_entry, "Search Contact")
+    refresh_list()
+
+
+def view_contact():
+    i = get_index()
+
+    if i is None:
+        messagebox.showwarning(
+            "Error",
+            "Select a contact first!"
+        )
+        return
+
+    c = contacts[i]
+
+    view = tk.Toplevel(app)
+    view.title("Contact Details")
+    view.geometry("320x230")
+    view.configure(bg=FRAME_BG)
+
+    tk.Label(
+        view,
+        text="📄 Contact Details",
+        font=("Arial", 16, "bold"),
+        fg=FG,
+        bg=FRAME_BG
+    ).pack(pady=15)
+
+    tk.Label(
+        view,
+        text=f"Name: {c['name']}",
+        fg=FG,
+        bg=FRAME_BG,
+        font=("Arial", 11)
+    ).pack(pady=5)
+
+    tk.Label(
+        view,
+        text=f"Phone: {c['phone']}",
+        fg=FG,
+        bg=FRAME_BG,
+        font=("Arial", 11)
+    ).pack(pady=5)
+
+    tk.Label(
+        view,
+        text=f"Email: {c['email']}",
+        fg=FG,
+        bg=FRAME_BG,
+        font=("Arial", 11)
+    ).pack(pady=5)
+
+    tk.Label(
+        view,
+        text=f"Category: {c.get('category', 'N/A')}",
+        fg=FG,
+        bg=FRAME_BG,
+        font=("Arial", 11)
+    ).pack(pady=5)
+
+
+def add_contact():
+    name = entry_name.get()
+    phone = entry_phone.get()
+    email = entry_email.get()
+    category = category_var.get()
+
+    if (
+        name in ["", "Name"]
+        or phone in ["", "Phone"]
+        or email in ["", "Email"]
+    ):
+        messagebox.showwarning(
+            "Error",
+            "All fields are required!"
+        )
+        return
+
+    
+    if not phone.isdigit():
+        messagebox.showwarning(
+            "Error",
+            "Phone number must contain only numbers!"
+        )
+        return
+
+    contacts.append({
+        "name": name,
+        "phone": phone,
+        "email": email,
+        "category": category
+    })
+
+    save_contacts()
+    refresh_list()
+    clear_fields()
+
+
+def delete_contact():
+    i = get_index()
+
+    if i is None:
+        messagebox.showwarning(
+            "Error",
+            "Select a contact first!"
+        )
+        return
+
+    confirm = messagebox.askyesno(
+        "Confirm Delete",
+        "Are you sure you want to delete this contact?"
+    )
+
+    if confirm:
+        contacts.pop(i)
+
+        save_contacts()
+        refresh_list()
+        clear_fields()
+
+
+def update_contact():
+    i = get_index()
+
+    if i is None:
+        messagebox.showwarning(
+            "Error",
+            "Select a contact first!"
+        )
+        return
+
+    name = entry_name.get()
+    phone = entry_phone.get()
+    email = entry_email.get()
+    category = category_var.get()
+
+    if (
+        name in ["", "Name"]
+        or phone in ["", "Phone"]
+        or email in ["", "Email"]
+    ):
+        messagebox.showwarning(
+            "Error",
+            "All fields are required!"
+        )
+        return
+
+    
+    if not phone.isdigit():
+        messagebox.showwarning(
+            "Error",
+            "Phone number must contain only numbers!"
+        )
+        return
+
+    contacts[i] = {
+        "name": name,
+        "phone": phone,
+        "email": email,
+        "category": category
+    }
+
+    save_contacts()
+    refresh_list()
+    clear_fields()
+
+
+def select_contact(event):
+    i = get_index()
+
+    if i is None:
+        return
+
+    c = contacts[i]
+
+    entry_name.delete(0, tk.END)
+    entry_phone.delete(0, tk.END)
+    entry_email.delete(0, tk.END)
+
+    entry_name.insert(0, c["name"])
+    entry_phone.insert(0, c["phone"])
+    entry_email.insert(0, c["email"])
+
+    entry_name.config(fg="white")
+    entry_phone.config(fg="white")
+    entry_email.config(fg="white")
+
+    category_var.set(c.get("category", "Friends"))
+
+
+app = tk.Tk()
+app.title("Contact Manager")
+app.geometry("520x780")
+app.configure(bg=BG)
+
+
+tk.Label(
+    app,
+    text="📱 Contact Manager",
+    font=("Arial", 20, "bold"),
+    fg=FG,
+    bg=BG
+).pack(pady=15)
+
+
+search_entry = tk.Entry(
+    app,
+    bg=ENTRY_BG,
+    fg="white",
+    insertbackground="white",
+    relief="flat",
+    font=("Arial", 11)
+)
+
+search_entry.pack(
+    padx=20,
+    pady=5,
+    fill="x"
+)
+
+add_placeholder(search_entry, "Search Contact")
+
+
+frame = tk.Frame(app, bg=FRAME_BG)
+
+frame.pack(
+    padx=20,
+    pady=10,
+    fill="x"
+)
+
+entry_name = tk.Entry(
+    frame,
+    bg=ENTRY_BG,
+    fg="white",
+    insertbackground="white",
+    relief="flat",
+    font=("Arial", 11)
+)
+
+entry_name.pack(
+    pady=8,
+    padx=10,
+    fill="x"
+)
+
+add_placeholder(entry_name, "Name")
+
+entry_phone = tk.Entry(
+    frame,
+    bg=ENTRY_BG,
+    fg="white",
+    insertbackground="white",
+    relief="flat",
+    font=("Arial", 11)
+)
+
+entry_phone.pack(
+    pady=8,
+    padx=10,
+    fill="x"
+)
+
+add_placeholder(entry_phone, "Phone")
+
+entry_email = tk.Entry(
+    frame,
+    bg=ENTRY_BG,
+    fg="white",
+    insertbackground="white",
+    relief="flat",
+    font=("Arial", 11)
+)
+
+entry_email.pack(
+    pady=8,
+    padx=10,
+    fill="x"
+)
+
+add_placeholder(entry_email, "Email")
+
+
+category_var = tk.StringVar(value=CATEGORIES[0])
+
+category_menu = tk.OptionMenu(
+    frame,
+    category_var,
+    *CATEGORIES
+)
+
+category_menu.config(
+    bg=ENTRY_BG,
+    fg="white",
+    relief="flat",
+    font=("Arial", 10)
+)
+
+category_menu.pack(
+    padx=10,
+    pady=8,
+    fill="x"
+)
+
+
+def btn(text, cmd):
+    return tk.Button(
+        app,
+        text=text,
+        command=cmd,
+        bg=ACCENT,
+        fg="white",
+        activebackground="#2563eb",
+        activeforeground="white",
+        relief="flat",
+        font=("Arial", 11, "bold"),
+        cursor="hand2"
+    )
+
+
+btn("Search Contact", search_contact).pack(
+    padx=20,
+    pady=4,
+    fill="x"
+)
+
+btn("Back to Contacts", back_to_contacts).pack(
+    padx=20,
+    pady=4,
+    fill="x"
+)
+
+btn("Add Contact", add_contact).pack(
+    padx=20,
+    pady=4,
+    fill="x"
+)
+
+btn("Update Contact", update_contact).pack(
+    padx=20,
+    pady=4,
+    fill="x"
+)
+
+btn("Delete Contact", delete_contact).pack(
+    padx=20,
+    pady=4,
+    fill="x"
+)
+
+btn("View Contact", view_contact).pack(
+    padx=20,
+    pady=4,
+    fill="x"
+)
+
+btn("Clear Fields", clear_fields).pack(
+    padx=20,
+    pady=4,
+    fill="x"
+)
+
+
+tk.Label(
+    app,
+    text="💾 Saved Contacts",
+    font=("Arial", 14, "bold"),
+    fg=FG,
+    bg=BG
+).pack(pady=8)
+
+list_frame = tk.Frame(app, bg=FRAME_BG)
+
+list_frame.pack(
+    padx=20,
+    pady=10,
+    fill="both",
+    expand=True
+)
+
+listbox = tk.Listbox(
+    list_frame,
+    bg=ENTRY_BG,
+    fg=FG,
+    selectbackground=ACCENT,
+    selectforeground="white",
+    font=("Arial", 11),
+    relief="flat",
+    highlightthickness=0
+)
+
+listbox.pack(
+    fill="both",
+    expand=True,
+    padx=10,
+    pady=10
+)
+
+listbox.bind(
+    "<<ListboxSelect>>",
+    select_contact
+)
+
+
+load_contacts()
+refresh_list()
+
+app.mainloop()

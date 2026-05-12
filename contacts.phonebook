@@ -1,0 +1,20 @@
+[
+    {
+        "name": "niel",
+        "phone": "112",
+        "email": "122",
+        "category": "Friends"
+    },
+    {
+        "name": "nath",
+        "phone": "345",
+        "email": "dvdfv",
+        "category": "Work"
+    },
+    {
+        "name": "varr",
+        "phone": "890",
+        "email": "ddsvdsv",
+        "category": "Friends"
+    }
+]
